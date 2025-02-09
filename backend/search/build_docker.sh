@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set -e
-project="booking-hrs"
+project="search"
 registry="ghcr.io/longnguyencse/booking-hrs"
 if [ ! -z $1 ]; then
   environment=$1
