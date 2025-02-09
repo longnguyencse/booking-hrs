@@ -1,0 +1,30 @@
+.idea/
+# IntelliJ IDEA specific files
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# User-specific files
+*.log
+*.swp
+*.swo
+*.bak
+*.tmp
+*.orig
+*.rej
+*.sublime-project
+*.sublime-workspace
+
+# Gradle specific files
+.gradle/
+build/
+
+# Java specific files
+*.class
+*.jar
+*.war
+*.ear
+
+# Spring Boot specific files
+target/
