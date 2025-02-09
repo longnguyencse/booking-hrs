@@ -1,5 +1,6 @@
 package hrs.com.interview.booking.controller;
 
+import hrs.com.interview.booking.facade.BookingFacade;
 import hrs.com.interview.booking.service.IBookingService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,31 +17,31 @@ import org.springframework.web.bind.annotation.RestController;
 @AllArgsConstructor
 public class BookingController {
 
-    private final IBookingService bookingService;
+    private final BookingFacade bookingFacade;
 
     @PostMapping("")
     ResponseEntity<String> createBooking() {
-        return ResponseEntity.ok("Booking created successfully");
+        return ResponseEntity.ok(bookingFacade.createBooking());
     }
 
     @PutMapping(":id")
     ResponseEntity<String> updateBooking() {
-        return ResponseEntity.ok("Booking updated successfully");
+        return ResponseEntity.ok(bookingFacade.updateBooking());
     }
 
     @DeleteMapping("")
     ResponseEntity<String> deleteBooking() {
-        return ResponseEntity.ok("Booking deleted successfully");
+        return ResponseEntity.ok(bookingFacade.deleteBooking());
     }
 
     @PatchMapping(":id")
     ResponseEntity<String> patchUpdateBooking() {
-        return ResponseEntity.ok("Booking retrieved successfully");
+        return ResponseEntity.ok(bookingFacade.patchUpdateBooking());
     }
 
     @GetMapping(":id")
     ResponseEntity<String> getBooking() {
-        return ResponseEntity.ok("All bookings retrieved successfully");
+        return ResponseEntity.ok(bookingFacade.getBooking());
     }
 
 }
