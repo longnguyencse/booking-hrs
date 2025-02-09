@@ -42,8 +42,4 @@ jobs:
 
       - name: build docker image
         run: ./build_docker.sh ${{ steps.vars.outputs.image_tag }} 'prod-latest'
-        env:
-          CR_PAT: ${{ secrets.CR_PAT }}
-          USERNAME: deploybot
-          TOKEN: ${{ secrets.JIO_PACKAGE_TOKEN }}   
         working-directory: backend/${{ steps.vars.outputs.service }}
