@@ -1,0 +1,49 @@
+# This workflow will build a Java project with Gradle
+# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
+
+name: Booking  Service
+
+on:
+  push:
+    tags: [ booking/** ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: set vars
+        id: vars
+        run: |
+          echo ::set-output name=tag::${GITHUB_REF#refs/*/}
+          echo ::set-output name=service::$(echo ${GITHUB_REF#refs/*/} | awk -F  "/" '{print $2}')
+          echo ::set-output name=image_tag::$(echo ${GITHUB_REF#refs/*/} | awk -F  "/" '{printf "%s-%s",$3,$4}')
+
+      - name: echo vars
+        run: |
+          echo ${{ steps.vars.outputs.tag }}
+          echo ${{ steps.vars.outputs.service }}
+          echo ${{ steps.vars.outputs.image_tag }}
+
+      - uses: actions/checkout@v3
+      
+      - name: setup JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'corretto'
+          cache: gradle
+
+      - name: grant execute permission for gradlew
+        run: chmod +x gradlew
+        working-directory: ${{ steps.vars.outputs.service }}
+
+      - name: build docker image
+        run: ./build_docker.sh ${{ steps.vars.outputs.image_tag }} 'prod-latest'
+        env:
+          CR_PAT: ${{ secrets.CR_PAT }}
+          USERNAME: deploybot
+          TOKEN: ${{ secrets.JIO_PACKAGE_TOKEN }}   
+        working-directory: ${{ steps.vars.outputs.service }}

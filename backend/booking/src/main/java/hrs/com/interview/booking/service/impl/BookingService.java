@@ -1,11 +1,11 @@
 package hrs.com.interview.booking.service.impl;
 
 import hrs.com.interview.booking.service.IBookingService;
-import lombok.extern.log4j.Log4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
 @Service
-@Log4j
+@Log4j2
 public class BookingService implements IBookingService {
     @Override
     public String createBooking(String bookingName, String bookingDate, String bookingTime) {

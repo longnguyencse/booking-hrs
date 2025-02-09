@@ -1,11 +1,11 @@
 # Project Structure
 
 The following is the structure of the project:
-.github/ - Contains the GitHub Actions workflow file
-backend/ - Contains the backend code
-config/ - Contains the configuration files
-docs/ - Contains the documentation
-iac/ - Contains the Infrastructure as Code (IaC) code
+- .github/ - Contains the GitHub Actions workflow file
+- backend/ - Contains the backend code
+- config/ - Contains the configuration files
+- docs/ - Contains the documentation
+- iac/ - Contains the Infrastructure as Code (IaC) code
 
 # Prerequisites
 - Java 17
@@ -18,8 +18,10 @@ iac/ - Contains the Infrastructure as Code (IaC) code
 
 # Architecture
 The following is the architecture of the project:
-![Architecture](docs/images/architecture.png)
+![Architecture](docs/images/app_service.png)
 
+DevOps tools:
+![DevOps Tool](docs/images/devops.png)
 # Setup
 1. Clone the repository
 2. Change the directory to the project root
