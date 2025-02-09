@@ -1,0 +1,481 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for creating VPC and associated AWS resources'
+
+Parameters:
+  ProjectName:
+    Description: Name of Project , prefix for for resource.
+    Type: String
+    Default: Project
+
+  Environment:
+    Description: An environment name that is prefixed to resource names
+    Type: String
+    Default: Dev
+
+  Region:
+    Description: An region name that contain resource
+    Type: String
+    Default: us-east-1a
+
+  Region1B:
+    Description: An region name that contain resource
+    Type: String
+    Default: us-east-1b
+
+  AMI:
+    Description: AMI - OS for EC2
+    Type: String
+    Default: "ami-096e0c14792ec93ac"
+
+  InstanceType:
+    Description: Instance Type
+    Type: String
+    Default: "m5a.large"
+
+  CognitoDomain:
+    Type: String
+    MinLength: 3
+    MaxLength: 63
+    AllowedPattern: ^[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?$
+    Description: Enter a string. Must be alpha numeric 3-63 in length.
+    Default: "road-map-dev-101101"
+
+  KeyName:
+    Description: The EC2 Key Pair to allow SSH access to the instances
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+    Default: dev
+
+Resources:
+  RoadMapDevVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: '10.0.0.0/16'
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}-VPC"
+
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref RoadMapDevVPC
+      CidrBlock: '10.0.1.0/24'
+      AvailabilityZone: !Sub "${Region}"
+      Tags:
+        - Key: Name
+          Value: !Sub private-${Environment}-1a
+
+  RdsSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref RoadMapDevVPC
+      CidrBlock: '10.0.3.0/24'
+      AvailabilityZone: !Sub "${Region}"
+      Tags:
+        - Key: Name
+          Value: !Sub rds-${Environment}-1a
+
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref RoadMapDevVPC
+      CidrBlock: '10.0.255.0/24'
+      AvailabilityZone: !Sub "${Region}"
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub public-${Environment}-1a
+
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref RoadMapDevVPC
+      CidrBlock: '10.0.2.0/24'
+      AvailabilityZone: !Sub "${Region1B}"
+      Tags:
+        - Key: Name
+          Value: !Sub private-${Environment}-1b
+
+  RdsSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref RoadMapDevVPC
+      CidrBlock: '10.0.4.0/24'
+      AvailabilityZone: !Sub "${Region1B}"
+      Tags:
+        - Key: Name
+          Value: !Sub rds-${Environment}-1b
+
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref RoadMapDevVPC
+      CidrBlock: '10.0.254.0/24'
+      AvailabilityZone: !Sub "${Region1B}"
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub private-${Environment}-1b
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: InternetGateway
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref RoadMapDevVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref RoadMapDevVPC
+      Tags:
+        - Key: Name
+          Value: PublicRouteTable
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref RoadMapDevVPC
+      Tags:
+        - Key: Name
+          Value: PrivateRouteTable
+
+  RouteToInternet:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref InternetGateway
+
+  PublicRouteTableAssociationA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicRouteTableAssociationRdsA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref RdsSubnetA
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicRouteTableAssociationB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetB
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicRouteTableAssociationRdsB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref RdsSubnetB
+      RouteTableId: !Ref PublicRouteTable
+
+  NATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NATGatewayEIP.AllocationId
+      SubnetId: !Ref PrivateSubnetA
+      Tags:
+        - Key: stack
+          Value: production
+
+  NATGatewayEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  RouteNATGateway:
+    DependsOn: NATGateway
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NATGateway
+
+  PrivateRouteTableAssociationA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetA
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateRouteTableAssociationB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetB
+      RouteTableId: !Ref PrivateRouteTable
+
+  MyEC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access
+      VpcId: !Ref RoadMapDevVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: '0.0.0.0/0'
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: '0.0.0.0/0'
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          CidrIp: '0.0.0.0/0'
+
+  MyDBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: 'Subnet group for RDS'
+      SubnetIds:
+        - !Ref RdsSubnetA
+        - !Ref RdsSubnetB
+
+  MyPostgresDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: MyPostgresDB
+      Engine: postgres
+      DBInstanceClass: db.t3.medium
+      AllocatedStorage: '30'
+      DBSubnetGroupName: !Ref MyDBSubnetGroup
+      EngineVersion: '16.2'
+      MasterUsername: "devBase"
+      MasterUserPassword: fEW.bC3LNE.3Rg.9Js
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}"
+
+  #  MyRedisCluster:
+  #    Type: AWS::ElastiCache::CacheCluster
+  #    Properties:
+  #      CacheNodeType: cache.t2.micro
+  #      Engine: redis
+  #      NumCacheNodes: 1
+  #      VpcSecurityGroupIds:
+  #        - !GetAtt MyRedisSecurityGroup.GroupId
+  #      CacheSubnetGroupName: !Ref MyDBSubnetGroup
+  #      Tags:
+  #        - Key: Name
+  #          Value: !Sub "${ProjectName}-${Environment}"
+
+  #  MyRedisSecurityGroup:
+  #    Type: AWS::EC2::SecurityGroup
+  #    Properties:
+  #      GroupDescription: Enable Redis access
+  #      VpcId: !Ref RoadMapDevVPC
+
+  MySQSQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${ProjectName}-${Environment}-Queue"
+
+  MyOpenSearchDomain:
+    Type: AWS::OpenSearchService::Domain
+    Properties:
+      DomainName: roadmap-dev-search
+      EngineVersion: '7.10'
+      NodeToNodeEncryptionOptions:
+        Enabled: true
+      ClusterConfig:
+        InstanceType: t2.small.elasticsearch
+        InstanceCount: 1
+        DedicatedMasterEnabled: false
+        ZoneAwarenessEnabled: false
+      EBSOptions:
+        EBSEnabled: true
+        VolumeSize: 10
+      VPCOptions:
+        SubnetIds:
+          - !Ref SubnetA
+        SecurityGroupIds:
+          - !GetAtt MyOpenSearchSecurityGroup.GroupId
+
+  MyOpenSearchSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable OpenSearch access
+      VpcId: !Ref RoadMapDevVPC
+
+  MyLoadBalancer:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      Name: MyLoadBalancer
+      Subnets:
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
+      SecurityGroups:
+        - !GetAtt MyALBSecurityGroup.GroupId
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}"
+
+  MyALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable ALB access
+      VpcId: !Ref RoadMapDevVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: '0.0.0.0/0'
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          CidrIp: '0.0.0.0/0'
+        - IpProtocol: tcp
+          FromPort: '5432'
+          ToPort: '5432'
+          CidrIp: '10.0.0.0/16'
+
+
+
+  # Dev S3
+  DevS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      #      BucketName: !Sub "${ProjectName}-${Environment}-Bucket"
+      BucketName: "roadmap-dev-393939"
+      AccessControl: Private
+
+  DevCDNDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !GetAtt DevS3Bucket.DomainName
+            Id: DevS3Bucket
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        Enabled: true
+        DefaultCacheBehavior:
+          TargetOriginId: DevS3Bucket
+          ForwardedValues:
+            QueryString: false
+          ViewerProtocolPolicy: redirect-to-https
+        DefaultRootObject: index.html
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+  # QA S3
+  QAS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      #      BucketName: !Sub "${ProjectName}-${Environment}-Bucket"
+      BucketName: "roadmap-qa-393939"
+      AccessControl: Private
+
+  QACDNDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !GetAtt QAS3Bucket.DomainName
+            Id: QAS3Bucket
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        Enabled: true
+        DefaultCacheBehavior:
+          TargetOriginId: QAS3Bucket
+          ForwardedValues:
+            QueryString: false
+          ViewerProtocolPolicy: redirect-to-https
+        DefaultRootObject: index.html
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+  # S3 UAT
+  UATS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      #      BucketName: !Sub "${ProjectName}-${Environment}-Bucket"
+      BucketName: "roadmap-uat-393939"
+      AccessControl: Private
+
+  UATCDNDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !GetAtt UATS3Bucket.DomainName
+            Id: UATS3Bucket
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        Enabled: true
+        DefaultCacheBehavior:
+          TargetOriginId: UATS3Bucket
+          ForwardedValues:
+            QueryString: false
+          ViewerProtocolPolicy: redirect-to-https
+        DefaultRootObject: index.html
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+
+  MyPinpointApplication:
+    Type: AWS::Pinpoint::App
+    Properties:
+      Name: !Sub "${ProjectName}-${Environment}-Pinpoint"
+#      Tags:
+#        - Key: Name
+#          Value: MyPinpointApp
+
+#  MyUserPool:
+#    Type: AWS::Cognito::UserPool
+#    Properties:
+#      UsernameConfiguration:
+#        CaseSensitive: false
+#      AutoVerifiedAttributes:
+#        - email
+#      UserPoolName: !Sub ${CognitoDomain}-user-pool
+#      Schema:
+#        - Name: email
+#          AttributeDataType: String
+#          Mutable: false
+#          Required: true
+#        - Name: name
+#          AttributeDataType: String
+#          Mutable: true
+#          Required: true
+#
+#  MyUserPoolClient:
+#    Type: AWS::Cognito::UserPoolClient
+#    Properties:
+#      UserPoolId: !Ref MyUserPool
+#      AllowedOAuthFlowsUserPoolClient: true
+#      CallbackURLs:
+#        - http://localhost:3000
+#      AllowedOAuthFlows:
+#        - code
+#        - implicit
+#      AllowedOAuthScopes:
+#        - phone
+#        - email
+#        - openid
+#        - profile
+#      SupportedIdentityProviders:
+#        - COGNITO
+##      GenerateSecret: true
+#
+#  MyUserPoolDomain:
+#    Type: AWS::Cognito::UserPoolDomain
+#    Properties:
+#      Domain: !Ref CognitoDomain
+##      Domain: "road-map-dev-101101"
+#      UserPoolId: !Ref MyUserPool
+#
+Outputs:
+  VPCID:
+    Value: !Ref RoadMapDevVPC
+    Description: VpcID
+  PublicSubnet1A:
+    Value: !Ref PublicSubnetA
+    Description: Public subnet 1A
