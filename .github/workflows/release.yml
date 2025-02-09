@@ -38,7 +38,7 @@ jobs:
 
       - name: grant execute permission for gradlew
         run: chmod +x gradlew
-        working-directory: ${{ steps.vars.outputs.service }}
+        working-directory: backend/${{ steps.vars.outputs.service }}
 
       - name: build docker image
         run: ./build_docker.sh ${{ steps.vars.outputs.image_tag }} 'prod-latest'
@@ -46,4 +46,4 @@ jobs:
           CR_PAT: ${{ secrets.CR_PAT }}
           USERNAME: deploybot
           TOKEN: ${{ secrets.JIO_PACKAGE_TOKEN }}   
-        working-directory: ${{ steps.vars.outputs.service }}
+        working-directory: backend/${{ steps.vars.outputs.service }}
