@@ -18,8 +18,8 @@ jobs:
         id: vars
         run: |
           echo ::set-output name=tag::${GITHUB_REF#refs/*/}
-          echo ::set-output name=service::$(echo ${GITHUB_REF#refs/*/} | awk -F  "/" '{print $2}')
-          echo ::set-output name=image_tag::$(echo ${GITHUB_REF#refs/*/} | awk -F  "/" '{printf "%s-%s",$3,$4}')
+          echo ::set-output name=service::$(echo ${GITHUB_REF#refs/*/} | awk -F  "/" '{print $1}')
+          echo ::set-output name=image_tag::$(echo ${GITHUB_REF#refs/*/} | awk -F  "/" '{printf "%s-%s",$2,$3}')
 
       - name: echo vars
         run: |
@@ -38,12 +38,10 @@ jobs:
 
       - name: grant execute permission for gradlew
         run: chmod +x gradlew
-        working-directory: ${{ steps.vars.outputs.service }}
+        working-directory: backend/${{ steps.vars.outputs.service }}
 
       - name: build docker image
         run: ./build_docker.sh ${{ steps.vars.outputs.image_tag }} 'prod-latest'
         env:
           CR_PAT: ${{ secrets.CR_PAT }}
-          USERNAME: deploybot
-          TOKEN: ${{ secrets.JIO_PACKAGE_TOKEN }}   
-        working-directory: ${{ steps.vars.outputs.service }}
+        working-directory: backend/${{ steps.vars.outputs.service }}
